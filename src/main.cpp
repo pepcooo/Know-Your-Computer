@@ -1,9 +1,11 @@
-#include <cstdio>
+#include "proc-reader.h"
+
 
 int main()
 {
-    printf("Hello world!");
-
+    ProcReader proc;
+    proc.readModel();
+    proc.printModel();
     return 0;
 }
 
