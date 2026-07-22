@@ -1,9 +1,9 @@
 #pragma once
 
-#include "component-reader.h"
+#include "../component-reader.h"
 
 class GpuReader : public ComponentReader {
-private:
+protected:
     unsigned int maxTemp_;
 public:
     GpuReader() : ComponentReader("Graphics Processing Unit (GPU)"), maxTemp_(0) {}
@@ -11,6 +11,7 @@ public:
 
     void readModel() override;
     void printModel() const override;
-    void readMaxTemp();
+
+    virtual void readMaxTemp();
     void printMaxTemp() const;
 };

@@ -22,7 +22,6 @@ void GpuReader::readModel() {
         modelName_ = tempModelName.substr(index + 2);
     }
 
-
     pclose(pipe);
 }
 
