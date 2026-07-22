@@ -4,12 +4,14 @@
 int main()
 {
     ProcReader proc;
-    GpuReader gpuReader;
+    GpuReader* gpuReader = GpuFactory::createGpuReader();
+
+    gpuReader->readModel();
+    gpuReader->readMaxTemp();
+    gpuReader->printModel();
 
     proc.readModel();
     proc.printModel();
-    gpuReader.readModel();
-    gpuReader.printModel();
 
     return 0;
 }
