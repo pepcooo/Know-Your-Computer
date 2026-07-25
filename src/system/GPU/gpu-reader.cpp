@@ -5,6 +5,8 @@
 #include <cstdio>
 #include <filesystem>
 
+
+//Add namespace because it's tedious to write std::filesystem all the time
 namespace fs = std::filesystem;
 
 
@@ -12,11 +14,14 @@ void GpuReader::printModel() const{
     std::cout<<"GPU: "<<modelName_<<std::endl;
 }
 
+
+//Print maximum permissive temperature (in Celsius) before the system shuts it down or starts enhanced cooling
 void GpuReader::printMaxTemp() const {
     std::cout<<"Max GPU temperature: "<<maxTemp_<<"°C"<<std::endl;
 }
 
 void IntelGpuReader::readMaxTemp() {
+    //Check every directory in serach for thermal_zone* directories
     for (const auto& entry : fs::directory_iterator("/sys/class/thermal")) {
         if (entry.is_directory()) {
             if (entry.path().string().find("thermal_zone") != std::string::npos) {
@@ -27,6 +32,7 @@ void IntelGpuReader::readMaxTemp() {
                 }
                 std::string type;
                 typeFile >> type;
+                //If the type matches Intel GPUs, check the thermal_zone directory for trip_point files
                 if (type == "x86_pkg_temp") {
                     for (const auto& maxTempEntry : fs::directory_iterator(entry.path())) {
                         if (maxTempEntry.path().string().find("trip_point_") != std::string::npos
@@ -37,6 +43,7 @@ void IntelGpuReader::readMaxTemp() {
                             }
                             int highestTemp = 0;
                             maxTempFile >> highestTemp;
+                            //Divide by 1000 - Linux holds information in millidegrees
                             highestTemp/=1000;
                             if (highestTemp > maxTemp_) {
                                 maxTemp_ = highestTemp;
@@ -61,7 +68,7 @@ void IntelGpuReader::readMaxTemp() {
                 std::string name;
                 hwmonNameFile >> name;
                 if (name == "coretemp") {
-                    for (const auto maxTempEntry : fs::directory_iterator(entry.path())) {
+                    for (const auto& maxTempEntry : fs::directory_iterator(entry.path())) {
                         if (maxTempEntry.path().string().find("temp") != std::string::npos
                         && maxTempEntry.path().string().find("_crit") != std::string::npos
                         && maxTempEntry.path().string().find("_alarm") == std::string::npos) {
