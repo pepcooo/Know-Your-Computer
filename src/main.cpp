@@ -1,15 +1,20 @@
+#include <iostream>
+#include <ostream>
+
 #include "proc-reader.h"
 #include "gpu-reader.h"
 
 int main()
 {
     ProcReader proc;
-    GpuReader* gpuReader = GpuFactory::createGpuReader();
 
-    gpuReader->readModel();
-    gpuReader->readMaxTemp();
-    gpuReader->printModel();
-
+    if (GpuReader* gpuReader = GpuFactory::createGpuReader()) {
+        gpuReader->readMaxTemp();
+        gpuReader->printModel();
+    }
+    else {
+        std::cerr<<"Err: Couldn't find GPU!"<<std::endl;
+    }
     proc.readModel();
     proc.printModel();
 
