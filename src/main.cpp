@@ -11,6 +11,7 @@ int main()
     if (GpuReader* gpuReader = GpuFactory::createGpuReader()) {
         gpuReader->readMaxTemp();
         gpuReader->printModel();
+        gpuReader->printMaxTemp();
     }
     else {
         std::cerr<<"Err: Couldn't find GPU!"<<std::endl;

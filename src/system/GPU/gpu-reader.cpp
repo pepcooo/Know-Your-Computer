@@ -3,6 +3,9 @@
 #include <fstream>
 #include <iostream>
 #include <cstdio>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 
 void GpuReader::printModel() const{
@@ -10,12 +13,81 @@ void GpuReader::printModel() const{
 }
 
 void GpuReader::printMaxTemp() const {
-    std::cout<<"Max temperature: "<<maxTemp_<<std::endl;
+    std::cout<<"Max GPU temperature: "<<maxTemp_<<"°C"<<std::endl;
 }
 
 void IntelGpuReader::readMaxTemp() {
-    return;
+    for (const auto& entry : fs::directory_iterator("/sys/class/thermal")) {
+        if (entry.is_directory()) {
+            if (entry.path().string().find("thermal_zone") != std::string::npos) {
+                std::string typePath = entry.path().string() + "/type";
+                std::fstream typeFile(typePath);
+                if (!typeFile.is_open()) {
+                    continue;
+                }
+                std::string type;
+                typeFile >> type;
+                if (type == "x86_pkg_temp") {
+                    for (const auto& maxTempEntry : fs::directory_iterator(entry.path())) {
+                        if (maxTempEntry.path().string().find("trip_point_") != std::string::npos
+                        && maxTempEntry.path().string().find("temp") != std::string::npos) {
+                            std::fstream maxTempFile(maxTempEntry.path().string());
+                            if (!maxTempFile.is_open()) {
+                                continue;
+                            }
+                            int highestTemp = 0;
+                            maxTempFile >> highestTemp;
+                            highestTemp/=1000;
+                            if (highestTemp > maxTemp_) {
+                                maxTemp_ = highestTemp;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    if (maxTemp_ == 0) {
+        //Fallback to check if there is actual data about max temp in hwmon (/sys/class/hwmon)
+        for (const auto& entry : fs::directory_iterator("/sys/class/hwmon")) {
+            if (entry.is_directory()) {
+                std::string hwmonNamePath = entry.path().string() + "/name";
+                std::fstream hwmonNameFile(hwmonNamePath);
+                if (!hwmonNameFile.is_open()) {
+                    continue;
+                }
+                std::string name;
+                hwmonNameFile >> name;
+                if (name == "coretemp") {
+                    for (const auto maxTempEntry : fs::directory_iterator(entry.path())) {
+                        if (maxTempEntry.path().string().find("temp") != std::string::npos
+                        && maxTempEntry.path().string().find("_crit") != std::string::npos
+                        && maxTempEntry.path().string().find("_alarm") == std::string::npos) {
+                            std::fstream maxTempFile(maxTempEntry.path().string());
+                            if (!maxTempFile.is_open()) {
+                                continue;
+                            }
+                            int highestTemp = 0;
+                            maxTempFile >> highestTemp;
+                            highestTemp/=1000;
+                            if (highestTemp > maxTemp_) {
+                                maxTemp_ = highestTemp;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    //Final fallback
+    if (maxTemp_ == 0) {
+        maxTemp_ = 100;
+    }
 }
+
 
 void AMDGpuReader::readMaxTemp() {
     return;
