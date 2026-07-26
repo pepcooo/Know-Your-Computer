@@ -26,7 +26,7 @@ void IntelGpuReader::readMaxTemp() {
         if (entry.is_directory()) {
             if (entry.path().string().find("thermal_zone") != std::string::npos) {
                 std::string typePath = entry.path().string() + "/type";
-                std::fstream typeFile(typePath);
+                std::ifstream typeFile(typePath);
                 if (!typeFile.is_open()) {
                     continue;
                 }
@@ -37,7 +37,7 @@ void IntelGpuReader::readMaxTemp() {
                     for (const auto& maxTempEntry : fs::directory_iterator(entry.path())) {
                         if (maxTempEntry.path().string().find("trip_point_") != std::string::npos
                         && maxTempEntry.path().string().find("temp") != std::string::npos) {
-                            std::fstream maxTempFile(maxTempEntry.path().string());
+                            std::ifstream maxTempFile(maxTempEntry.path().string());
                             if (!maxTempFile.is_open()) {
                                 continue;
                             }
@@ -56,12 +56,13 @@ void IntelGpuReader::readMaxTemp() {
     }
 
 
-    if (maxTemp_ == 0) {
+    if (maxTemp_ <= 0) {
         //Fallback to check if there is actual data about max temp in hwmon (/sys/class/hwmon)
         for (const auto& entry : fs::directory_iterator("/sys/class/hwmon")) {
             if (entry.is_directory()) {
                 std::string hwmonNamePath = entry.path().string() + "/name";
-                std::fstream hwmonNameFile(hwmonNamePath);
+                std::ifstream hwmonNameFile(hwmonNamePath);
+
                 if (!hwmonNameFile.is_open()) {
                     continue;
                 }
@@ -72,7 +73,7 @@ void IntelGpuReader::readMaxTemp() {
                         if (maxTempEntry.path().string().find("temp") != std::string::npos
                         && maxTempEntry.path().string().find("_crit") != std::string::npos
                         && maxTempEntry.path().string().find("_alarm") == std::string::npos) {
-                            std::fstream maxTempFile(maxTempEntry.path().string());
+                            std::ifstream maxTempFile(maxTempEntry.path().string());
                             if (!maxTempFile.is_open()) {
                                 continue;
                             }
@@ -89,7 +90,7 @@ void IntelGpuReader::readMaxTemp() {
         }
     }
 
-    //Final fallback
+    //Final fallback - if no info found, set maxTemp_ to default max Intel GPU temperature
     if (maxTemp_ == 0) {
         maxTemp_ = 100;
     }

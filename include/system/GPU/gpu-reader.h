@@ -4,7 +4,7 @@
 
 class GpuReader : public ComponentReader {
 protected:
-    unsigned int maxTemp_;
+    int maxTemp_;
 public:
     //Constructor assigns modelName_ given by GpuFactory
     GpuReader(const std::string& modelName)
