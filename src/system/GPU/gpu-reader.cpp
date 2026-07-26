@@ -99,7 +99,39 @@ void IntelGpuReader::readMaxTemp() {
 
 
 void AMDGpuReader::readMaxTemp() {
-    return;
+    for (const auto& entry : fs::directory_iterator("/sys/class/hwmon")) {
+        if (entry.is_directory()) {
+            std::string namePath = entry.path().string() + "/name";
+            std::ifstream nameFile(namePath);
+            if (!nameFile) {
+                std::cerr<<"Couldn't open the name file for AMD based GPU!"<<std::endl;
+                continue;
+            }
+
+            std::string type;
+            nameFile >> type;
+            if (type == "amdgpu") {
+                for (const auto& tempEntry : fs::directory_iterator(entry.path().string())) {
+                    if (tempEntry.path().string().find("temp") != std::string::npos
+                    && tempEntry.path().string().find("_crit") != std::string::npos) {
+                        int highestTemp = 0;
+                        std::string tempPath = tempEntry.path().string();
+                        std::ifstream  tempFile(tempPath);
+                        if (!tempFile) {
+                            std::cerr<<"Couldn't open the temperature file for AMD based GPU!"<<std::endl;
+                            continue;
+                        }
+
+                        tempFile >> highestTemp;
+                        highestTemp/=1000;
+                        if (highestTemp > maxTemp_) {
+                            maxTemp_ = highestTemp;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 void NVIDIAGpuReader::readMaxTemp() {
