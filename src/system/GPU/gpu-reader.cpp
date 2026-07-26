@@ -1,4 +1,5 @@
 #include "gpu-reader.h"
+#include "nvml.h"
 
 #include <fstream>
 #include <iostream>
@@ -21,7 +22,7 @@ void GpuReader::printMaxTemp() const {
 }
 
 void IntelGpuReader::readMaxTemp() {
-    //Check every directory in serach for thermal_zone* directories
+    //Check every directory in search for thermal_zone* directories
     for (const auto& entry : fs::directory_iterator("/sys/class/thermal")) {
         if (entry.is_directory()) {
             if (entry.path().string().find("thermal_zone") != std::string::npos) {
@@ -102,7 +103,38 @@ void AMDGpuReader::readMaxTemp() {
 }
 
 void NVIDIAGpuReader::readMaxTemp() {
-    return;
+    //Using nvml api to retrieve the information
+    nvmlReturn_t initType = nvmlInit();
+    if (initType != NVML_SUCCESS) {
+        std::cerr<<"Unable to initialize nvml library!"<<std::endl;
+        return;
+    }
+
+    unsigned int deviceCount;
+    nvmlDevice_t gpu;
+    unsigned int temp;
+
+    if (nvmlDeviceGetCount(&deviceCount) != NVML_SUCCESS || deviceCount == 0) {
+        std::cerr<<"Unable to retrieve the device count!"<<std::endl;
+        nvmlShutdown();
+        return;
+    }
+
+    if (nvmlDeviceGetHandleByIndex(0, &gpu) != NVML_SUCCESS) {
+        std::cerr<<"Unable to retrieve the GPU handle!"<<std::endl;
+        nvmlShutdown();
+        return;
+    }
+
+    if (nvmlDeviceGetTemperatureThreshold(gpu, NVML_TEMPERATURE_THRESHOLD_SHUTDOWN, &temp) != NVML_SUCCESS) {
+        std::cerr<<"Unable to retrieve max temperature threshold for GPU!"<<std::endl;
+        nvmlShutdown();
+        return;
+    }
+
+    //Clang-Tidy requirement
+    maxTemp_ = static_cast<int>(temp);
+    nvmlShutdown();
 }
 
 

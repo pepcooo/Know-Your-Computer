@@ -15,4 +15,8 @@ add_executable(Know_Your_Computer
 target_include_directories(Know_Your_Computer PRIVATE
         ${CMAKE_SOURCE_DIR}/include/system/CPU
         ${CMAKE_SOURCE_DIR}/include/system/GPU
+        ${CMAKE_SOURCE_DIR}/include/system/
+        ${CMAKE_SOURCE_DIR}/vendor/nvml
 )
+
+target_link_libraries(Know_Your_Computer PRIVATE nvidia-ml)
