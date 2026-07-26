@@ -1,4 +1,4 @@
-#include "../../include/system/feature-reader.h"
+#include "../../include/system/motherboard-reader.h"
 #include <iostream>
 #include <fstream>
 #include <memory>   // do "otworzenia" terminala wirtualnego
@@ -6,7 +6,7 @@
 #include <cstdio>   // do popen
 using namespace std;
 
-string FeatureReader::execCommand(const char* cmd) {
+string MotherboardReader::execCommand(const char* cmd) {
     array<char, 128> buffer{};
     string type;
 
@@ -26,7 +26,7 @@ string FeatureReader::execCommand(const char* cmd) {
     return type;
 }
 
-void FeatureReader::readModel() {
+void MotherboardReader::readModel() {
     ifstream fileVendor("/sys/class/dmi/id/board_vendor");
     if (fileVendor.is_open()) {
         getline(fileVendor, vendor);
@@ -53,7 +53,7 @@ void FeatureReader::readModel() {
 
 }
 
-void FeatureReader::printModel() const {
+void MotherboardReader::printModel() const {
     cout << "Vendor: " << vendor << endl;
     cout << "Model: " << modelName_ << endl;
     cout << "RAM type: " << RAM_type << endl;

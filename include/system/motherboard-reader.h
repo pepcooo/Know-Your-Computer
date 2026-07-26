@@ -2,10 +2,10 @@
 
 #include "component-reader.h"
 
-class FeatureReader : public ComponentReader {
+class MotherboardReader : public ComponentReader {
 public:
-    FeatureReader() : ComponentReader("Feature") {};
-    ~FeatureReader() override = default;
+    MotherboardReader() : ComponentReader("Feature") {};
+    ~MotherboardReader() override = default;
 
     void readModel() override;
     void printModel() const override;
