@@ -9,12 +9,16 @@ add_executable(Know_Your_Computer
         include/system/component-reader.h
         include/system/CPU/proc-reader.h
         include/system/GPU/gpu-reader.h
+        include/system/Motherboard/motherboard-reader.h
         src/system/CPU/proc-reader.cpp
-        src/system/GPU/gpu-reader.cpp)
+        src/system/GPU/gpu-reader.cpp
+        src/system/Motherboard/motherboard-reader.cpp
+        )
 
 target_include_directories(Know_Your_Computer PRIVATE
         ${CMAKE_SOURCE_DIR}/include/system/CPU
         ${CMAKE_SOURCE_DIR}/include/system/GPU
+        ${CMAKE_SOURCE_DIR}/include/system/Motherboard
         ${CMAKE_SOURCE_DIR}/include/system/
         ${CMAKE_SOURCE_DIR}/vendor/nvml
 )
