@@ -21,6 +21,12 @@ void GpuReader::printMaxTemp() const {
     std::cout<<"Max GPU temperature: "<<maxTemp_<<"°C"<<std::endl;
 }
 
+
+void GpuReader::printCurrTemp() const {
+    std::cout<<"Current GPU temperature: "<<currTemp_<<"°C"<<std::endl;
+}
+
+
 void IntelGpuReader::readMaxTemp() {
     //Check every directory in search for thermal_zone* directories
     for (const auto& entry : fs::directory_iterator("/sys/class/thermal")) {
@@ -98,6 +104,11 @@ void IntelGpuReader::readMaxTemp() {
 }
 
 
+void IntelGpuReader::readCurrTemp() {
+
+}
+
+
 void AMDGpuReader::readMaxTemp() {
     for (const auto& entry : fs::directory_iterator("/sys/class/hwmon")) {
         if (entry.is_directory()) {
@@ -134,6 +145,12 @@ void AMDGpuReader::readMaxTemp() {
     }
 }
 
+
+void AMDGpuReader::readCurrTemp() {
+
+}
+
+
 void NVIDIAGpuReader::readMaxTemp() {
     //Using nvml api to retrieve the information
     nvmlReturn_t initType = nvmlInit();
@@ -167,6 +184,11 @@ void NVIDIAGpuReader::readMaxTemp() {
     //Clang-Tidy requirement
     maxTemp_ = static_cast<int>(temp);
     nvmlShutdown();
+}
+
+
+void NVIDIAGpuReader::readCurrTemp() {
+
 }
 
 
