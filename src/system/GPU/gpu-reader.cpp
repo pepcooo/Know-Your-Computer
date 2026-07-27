@@ -1,10 +1,19 @@
 #include "gpu-reader.h"
+
 #include "nvml.h"
+#include <dlfcn.h>
 
 #include <fstream>
 #include <iostream>
 #include <cstdio>
 #include <filesystem>
+
+
+typedef nvmlReturn_t (*nvmlInit_t)(void);
+typedef nvmlReturn_t (*nvmlShutdown_t)(void);
+typedef nvmlReturn_t (*nvmlDeviceGetCount_t)(unsigned int*);
+typedef nvmlReturn_t (*nvmlDeviceGetHandleByIndex_t)(unsigned int, nvmlDevice_t *);
+typedef nvmlReturn_t (*nvmlDeviceGetTemperature_t)(nvmlDevice_t, nvmlTemperatureThresholds_enum, unsigned int *);
 
 
 //Add namespace because it's tedious to write std::filesystem all the time
@@ -272,10 +281,31 @@ void AMDGpuReader::readCurrTemp() {
 
 
 void NVIDIAGpuReader::readMaxTemp() {
+    //dynamically linking the library
+    void* nvmlLib = dlopen("libnvidia-ml.so.1", RTLD_NOW);
+    if (!nvmlLib) {
+        return;
+    }
     //Using nvml api to retrieve the information
-    nvmlReturn_t initType = nvmlInit();
-    if (initType != NVML_SUCCESS) {
-        std::cerr<<"Unable to initialize nvml library!"<<std::endl;
+    auto initFunc = (nvmlInit_t)dlsym(nvmlLib, ("nvmlInit_v2"));
+    if (!initFunc) {
+        initFunc = (nvmlInit_t)dlsym(nvmlLib, ("nvmlInit"));
+    }
+
+    auto shutdownFunc = (nvmlShutdown_t)dlsym(nvmlLib, "nvmlShutdown");
+    auto getDeviceCount = (nvmlDeviceGetCount_t)dlsym(nvmlLib, "nvmlDeviceGetCount");
+    auto getHandleFunc = (nvmlDeviceGetHandleByIndex_t)dlsym(nvmlLib, "nvmlDeviceGetHandleByIndex_v2");
+    auto getTempFunc = (nvmlDeviceGetTemperature_t)dlsym(nvmlLib, "nvmlDeviceGetTemperatureThreshold");
+
+    if (!initFunc || !shutdownFunc || !getDeviceCount || !getHandleFunc || !getTempFunc) {
+        std::cerr << "Couldn't find necessary functions in nvml library!" << std::endl;
+        dlclose(nvmlLib);
+        return;
+    }
+
+    if (initFunc() != NVML_SUCCESS) {
+        std::cerr << "Couldn't initialize nvml library!" << std::endl;
+        dlclose(nvmlLib);
         return;
     }
 
@@ -283,27 +313,31 @@ void NVIDIAGpuReader::readMaxTemp() {
     nvmlDevice_t gpu;
     unsigned int temp;
 
-    if (nvmlDeviceGetCount(&deviceCount) != NVML_SUCCESS || deviceCount == 0) {
+    if (getDeviceCount(&deviceCount) != NVML_SUCCESS || deviceCount == 0) {
         std::cerr<<"Unable to retrieve the device count!"<<std::endl;
-        nvmlShutdown();
+        shutdownFunc();
+        dlclose(nvmlLib);
         return;
     }
 
-    if (nvmlDeviceGetHandleByIndex(0, &gpu) != NVML_SUCCESS) {
+    if (getHandleFunc(0, &gpu) != NVML_SUCCESS) {
         std::cerr<<"Unable to retrieve the GPU handle!"<<std::endl;
-        nvmlShutdown();
+        shutdownFunc();
+        dlclose(nvmlLib);
         return;
     }
 
-    if (nvmlDeviceGetTemperatureThreshold(gpu, NVML_TEMPERATURE_THRESHOLD_SHUTDOWN, &temp) != NVML_SUCCESS) {
+    if (getTempFunc(gpu, NVML_TEMPERATURE_THRESHOLD_SHUTDOWN, &temp) != NVML_SUCCESS) {
         std::cerr<<"Unable to retrieve max temperature threshold for GPU!"<<std::endl;
-        nvmlShutdown();
+        shutdownFunc();
+        dlclose(nvmlLib);
         return;
     }
 
     //Clang-Tidy requirement
     maxTemp_ = static_cast<int>(temp);
-    nvmlShutdown();
+    shutdownFunc();
+    dlclose(nvmlLib);
 }
 
 
