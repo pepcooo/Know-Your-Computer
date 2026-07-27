@@ -12,8 +12,9 @@
 typedef nvmlReturn_t (*nvmlInit_t)(void);
 typedef nvmlReturn_t (*nvmlShutdown_t)(void);
 typedef nvmlReturn_t (*nvmlDeviceGetCount_t)(unsigned int*);
-typedef nvmlReturn_t (*nvmlDeviceGetHandleByIndex_t)(unsigned int, nvmlDevice_t *);
-typedef nvmlReturn_t (*nvmlDeviceGetTemperature_t)(nvmlDevice_t, nvmlTemperatureThresholds_enum, unsigned int *);
+typedef nvmlReturn_t (*nvmlDeviceGetHandleByIndex_t)(unsigned int, nvmlDevice_t*);
+typedef nvmlReturn_t (*nvmlDeviceGetMaxTemperature_t)(nvmlDevice_t, nvmlTemperatureThresholds_enum, unsigned int*);
+
 
 
 //Add namespace because it's tedious to write std::filesystem all the time
@@ -295,7 +296,7 @@ void NVIDIAGpuReader::readMaxTemp() {
     auto shutdownFunc = (nvmlShutdown_t)dlsym(nvmlLib, "nvmlShutdown");
     auto getDeviceCount = (nvmlDeviceGetCount_t)dlsym(nvmlLib, "nvmlDeviceGetCount");
     auto getHandleFunc = (nvmlDeviceGetHandleByIndex_t)dlsym(nvmlLib, "nvmlDeviceGetHandleByIndex_v2");
-    auto getTempFunc = (nvmlDeviceGetTemperature_t)dlsym(nvmlLib, "nvmlDeviceGetTemperatureThreshold");
+    auto getTempFunc = (nvmlDeviceGetMaxTemperature_t)dlsym(nvmlLib, "nvmlDeviceGetTemperatureThreshold");
 
     if (!initFunc || !shutdownFunc || !getDeviceCount || !getHandleFunc || !getTempFunc) {
         std::cerr << "Couldn't find necessary functions in nvml library!" << std::endl;
