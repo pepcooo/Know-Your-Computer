@@ -140,7 +140,92 @@ void IntelGpuReader::readMaxTemp() {
 
 
 void IntelGpuReader::readCurrTemp() {
+    for (const auto& entry : fs::directory_iterator("/sys/class/hwmon")) {
+        if (entry.is_directory()) {
+            std::string hwmonNamePath = entry.path().string() + "/name";
+            std::ifstream hwmonNameFile(hwmonNamePath);
+            if (!hwmonNameFile.is_open()) {
+                continue;
+            }
 
+            std::string name;
+            hwmonNameFile >> name;
+
+            if (name == "i915" || name == "xe") {
+                int highestTemperature = 0;
+                for (const auto& tempEntry : fs::directory_iterator(entry.path())) {
+                    if (tempEntry.path().string().find("temp") != std::string::npos
+                    && tempEntry.path().string().find("_input") != std::string::npos) {
+                        std::ifstream tempFile(tempEntry.path().string());
+                        if (!tempFile.is_open()) {
+                            continue;
+                        }
+                        int temperature = 0;
+                        tempFile >> temperature;
+                        temperature/=1000;
+                        //Searching for highest temperature sensor on the GPU
+                        if (temperature > highestTemperature) {
+                            highestTemperature = temperature;
+                        }
+                    }
+                }
+                currTemp_ = highestTemperature;
+                return;
+            }
+        }
+    }
+
+    //Fallback 1 - if there wasn't a hwmon folder with name "i915" nor "xe" search for "coretemp"
+    //because the GPU is probably integrated with CPU.
+    for (const auto& entry : fs::directory_iterator("/sys/class/hwmon")) {
+        if (entry.is_directory()) {
+            std::string hwmonNamePath = entry.path().string() + "/name";
+            std::ifstream hwmonNameFile(hwmonNamePath);
+            if (!hwmonNameFile.is_open()) {
+                continue;
+            }
+            std::string name;
+            hwmonNameFile >> name;
+
+            if (name == "coretemp") {
+                int highestTemperature = 0;
+                for (const auto& labelEntry : fs::directory_iterator(entry.path())) {
+                    if (labelEntry.path().string().find("temp") != std::string::npos
+                    && labelEntry.path().string().find("_label") != std::string::npos) {
+
+                        std::ifstream labelFile(labelEntry.path().string());
+                        if (!labelFile.is_open()) {
+                            continue;
+                        }
+
+                        std::string label;
+                        std::getline(labelFile, label);
+                        if (label.find("Package id") != std::string::npos) {
+                            std::string tempPath = labelEntry.path().string();
+                            size_t index = tempPath.find("_label");
+                            tempPath.replace(index, 6, "_input");
+
+                            std::ifstream tempFile(tempPath);
+                            if (!tempFile.is_open()) {
+                                continue;
+                            }
+                            int temperature = 0;
+                            tempFile >> temperature;
+                            temperature/=1000;
+                            if (temperature > highestTemperature) {
+                                highestTemperature = temperature;
+                            }
+                        }
+                    }
+                }
+                currTemp_ = highestTemperature;
+                return;
+            }
+        }
+
+    if (currTemp_ <= 0) {
+        currTemp_ = -273;
+    }}
 }
 
 
