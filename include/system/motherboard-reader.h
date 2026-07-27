@@ -12,9 +12,6 @@ public:
 
 private:
     std::string RAM_type;
-    std::string RAM_size;
     std::string socket;
     std::string vendor;
-
-    static std::string execCommand(const char* cmd);
 };
