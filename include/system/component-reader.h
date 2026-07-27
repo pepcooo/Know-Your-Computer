@@ -6,6 +6,7 @@ class ComponentReader
 protected:
     std::string componentType_;
     std::string modelName_;
+    static std::string execCommand(const char* cmd);
 public:
     ComponentReader(std::string componentType)
         : componentType_(std::move(componentType)), modelName_("Unknown"){}
