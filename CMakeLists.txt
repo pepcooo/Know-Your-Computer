@@ -13,6 +13,7 @@ add_executable(Know_Your_Computer
         src/system/CPU/proc-reader.cpp
         src/system/GPU/gpu-reader.cpp
         src/system/Motherboard/motherboard-reader.cpp
+        src/system/component-reader.cpp
         )
 
 target_include_directories(Know_Your_Computer PRIVATE

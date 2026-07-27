@@ -3,10 +3,12 @@
 
 #include "proc-reader.h"
 #include "gpu-reader.h"
+#include "motherboard-reader.h"
 
 int main()
 {
     ProcReader proc;
+    MotherboardReader motherboard;
 
     if (GpuReader* gpuReader = GpuFactory::createGpuReader()) {
         gpuReader->readMaxTemp();
@@ -18,6 +20,9 @@ int main()
     }
     proc.readModel();
     proc.printModel();
+
+    motherboard.readModel();
+    motherboard.printModel();
 
     return 0;
 }
