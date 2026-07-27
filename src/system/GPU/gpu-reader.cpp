@@ -28,33 +28,31 @@ void GpuReader::printCurrTemp() const {
 
 
 void IntelGpuReader::readMaxTemp() {
-    //Check every directory in search for thermal_zone* directories
-    for (const auto& entry : fs::directory_iterator("/sys/class/thermal")) {
+    //Checking every directory in hwmon directory to find Intel made GPUs.
+    for (const auto& entry : fs::directory_iterator("/sys/class/hwmon")) {
         if (entry.is_directory()) {
-            if (entry.path().string().find("thermal_zone") != std::string::npos) {
-                std::string typePath = entry.path().string() + "/type";
-                std::ifstream typeFile(typePath);
-                if (!typeFile.is_open()) {
-                    continue;
-                }
-                std::string type;
-                typeFile >> type;
-                //If the type matches Intel GPUs, check the thermal_zone directory for trip_point files
-                if (type == "x86_pkg_temp") {
-                    for (const auto& maxTempEntry : fs::directory_iterator(entry.path())) {
-                        if (maxTempEntry.path().string().find("trip_point_") != std::string::npos
-                        && maxTempEntry.path().string().find("temp") != std::string::npos) {
-                            std::ifstream maxTempFile(maxTempEntry.path().string());
-                            if (!maxTempFile.is_open()) {
-                                continue;
-                            }
-                            int highestTemp = 0;
-                            maxTempFile >> highestTemp;
-                            //Divide by 1000 - Linux holds information in millidegrees
-                            highestTemp/=1000;
-                            if (highestTemp > maxTemp_) {
-                                maxTemp_ = highestTemp;
-                            }
+            std::string hwmonNamePath = entry.path().string() + "/name";
+            std::ifstream hwmonNameFile(hwmonNamePath);
+
+            if (!hwmonNameFile.is_open()) {
+                continue;
+            }
+            std::string name;
+            hwmonNameFile >> name;
+            if (name == "i915" || name == "xe") {
+                for (const auto& maxTempEntry : fs::directory_iterator(entry.path())) {
+                    if (maxTempEntry.path().string().find("temp") != std::string::npos
+                    && maxTempEntry.path().string().find("_crit") != std::string::npos
+                    && maxTempEntry.path().string().find("_alarm") == std::string::npos) {
+                        std::ifstream maxTempFile(maxTempEntry.path().string());
+                        if (!maxTempFile.is_open()) {
+                            continue;
+                        }
+                        int highestTemp = 0;
+                        maxTempFile >> highestTemp;
+                        highestTemp/=1000;
+                        if (highestTemp > maxTemp_) {
+                            maxTemp_ = highestTemp;
                         }
                     }
                 }
@@ -62,9 +60,8 @@ void IntelGpuReader::readMaxTemp() {
         }
     }
 
-
-    if (maxTemp_ <= 0) {
-        //Fallback to check if there is actual data about max temp in hwmon (/sys/class/hwmon)
+    //Fallback 1 - if nothing found, check for name file equal to "coretemp"
+    if (maxTemp_ <= 0){
         for (const auto& entry : fs::directory_iterator("/sys/class/hwmon")) {
             if (entry.is_directory()) {
                 std::string hwmonNamePath = entry.path().string() + "/name";
@@ -97,8 +94,46 @@ void IntelGpuReader::readMaxTemp() {
         }
     }
 
+
+    //Fallback 2 - check every directory in search for thermal_zone* directory with type of x86_pkg_temp
+    // if nothing found in hwmon.
+    if (maxTemp_ <= 0){
+        for (const auto& entry : fs::directory_iterator("/sys/class/thermal")) {
+            if (entry.is_directory()) {
+                if (entry.path().string().find("thermal_zone") != std::string::npos) {
+                    std::string typePath = entry.path().string() + "/type";
+                    std::ifstream typeFile(typePath);
+                    if (!typeFile.is_open()) {
+                        continue;
+                    }
+                    std::string type;
+                    typeFile >> type;
+                    //If the type matches Intel GPUs, check the thermal_zone directory for trip_point files
+                    if (type == "x86_pkg_temp") {
+                        for (const auto& maxTempEntry : fs::directory_iterator(entry.path())) {
+                            if (maxTempEntry.path().string().find("trip_point_") != std::string::npos
+                            && maxTempEntry.path().string().find("temp") != std::string::npos) {
+                                std::ifstream maxTempFile(maxTempEntry.path().string());
+                                if (!maxTempFile.is_open()) {
+                                    continue;
+                                }
+                                int highestTemp = 0;
+                                maxTempFile >> highestTemp;
+                                //Divide by 1000 - Linux holds information in millidegrees
+                                highestTemp/=1000;
+                                if (highestTemp > maxTemp_) {
+                                    maxTemp_ = highestTemp;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     //Final fallback - if no info found, set maxTemp_ to default max Intel GPU temperature
-    if (maxTemp_ == 0) {
+    if (maxTemp_ <= 0) {
         maxTemp_ = 100;
     }
 }
