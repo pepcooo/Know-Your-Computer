@@ -3,19 +3,19 @@
 #include <fstream>
 
 void MotherboardReader::readModel() {
-    std::ifstream fileVendor_("/sys/class/dmi/id/board_vendor");
-    if (fileVendor_.is_open()) {
-        std::getline(fileVendor_, vendor_);
-        fileVendor_.close();
+    std::ifstream fileVendor("/sys/class/dmi/id/board_vendor");
+    if (fileVendor.is_open()) {
+        std::getline(fileVendor, vendor_);
+        fileVendor.close();
     }
     else {
         vendor_ = "Unknown";
     }
 
-    std::ifstream fileModel_("/sys/class/dmi/id/board_name");
-    if (fileModel_.is_open()) {
-        std::getline(fileModel_, modelName_);
-        fileModel_.close();
+    std::ifstream fileModel("/sys/class/dmi/id/board_name");
+    if (fileModel.is_open()) {
+        std::getline(fileModel, modelName_);
+        fileModel.close();
     }
     else {
         modelName_ = "Unknown";
