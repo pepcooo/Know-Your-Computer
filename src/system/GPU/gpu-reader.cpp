@@ -45,6 +45,7 @@ void IntelGpuReader::readMaxTemp() {
             std::ifstream hwmonNameFile(hwmonNamePath);
 
             if (!hwmonNameFile.is_open()) {
+                std::cerr<<"Couldn't open the name file for Intel based GPU!"<<std::endl;
                 continue;
             }
             std::string name;
@@ -56,6 +57,7 @@ void IntelGpuReader::readMaxTemp() {
                     && maxTempEntry.path().string().find("_alarm") == std::string::npos) {
                         std::ifstream maxTempFile(maxTempEntry.path().string());
                         if (!maxTempFile.is_open()) {
+                            std::cerr<<"Couldn't open the temp*_crit file for Intel based GPU!"<<std::endl;
                             continue;
                         }
                         int highestTemp = 0;
@@ -78,6 +80,7 @@ void IntelGpuReader::readMaxTemp() {
                 std::ifstream hwmonNameFile(hwmonNamePath);
 
                 if (!hwmonNameFile.is_open()) {
+                    std::cerr<<"Couldn't open the name file for potentially integrated Intel based GPU!"<<std::endl;
                     continue;
                 }
                 std::string name;
@@ -89,6 +92,7 @@ void IntelGpuReader::readMaxTemp() {
                         && maxTempEntry.path().string().find("_alarm") == std::string::npos) {
                             std::ifstream maxTempFile(maxTempEntry.path().string());
                             if (!maxTempFile.is_open()) {
+                                std::cerr<<"Couldn't open the temp*_crit file for potentially integrated Intel based GPU!"<<std::endl;
                                 continue;
                             }
                             int highestTemp = 0;
@@ -114,6 +118,7 @@ void IntelGpuReader::readMaxTemp() {
                     std::string typePath = entry.path().string() + "/type";
                     std::ifstream typeFile(typePath);
                     if (!typeFile.is_open()) {
+                        std::cerr<<"Couldn't open the type file in thermal_zone* directory!"<<std::endl;
                         continue;
                     }
                     std::string type;
@@ -125,6 +130,7 @@ void IntelGpuReader::readMaxTemp() {
                             && maxTempEntry.path().string().find("temp") != std::string::npos) {
                                 std::ifstream maxTempFile(maxTempEntry.path().string());
                                 if (!maxTempFile.is_open()) {
+                                    std::cerr<<"Couldn't open the trip_point_*_temp file in thermal_zone directory!"<<std::endl;
                                     continue;
                                 }
                                 int highestTemp = 0;
@@ -277,7 +283,37 @@ void AMDGpuReader::readMaxTemp() {
 
 
 void AMDGpuReader::readCurrTemp() {
-
+    int highestTemperature = 0;
+    for (const auto& entry : fs::directory_iterator("/sys/class/hwmon")) {
+        if (entry.is_directory()) {
+            std::string namePath = entry.path().string() + "/name";
+            std::ifstream nameFile(namePath);
+            if (!nameFile.is_open()) {
+                continue;
+            }
+            std::string type;
+            nameFile >> type;
+            if (type == "amdgpu") {
+                for (const auto& tempEntry : fs::directory_iterator(entry.path().string())) {
+                    std::string tempPath = tempEntry.path().string();
+                    if (tempPath.find("temp") != std::string::npos
+                    && tempPath.find("_input") != std::string::npos) {
+                        int temperature = 0;
+                        std::ifstream tempFile(tempEntry.path().string());
+                        if (!tempFile.is_open()) {
+                            continue;
+                        }
+                        tempFile >> temperature;
+                        temperature/=1000;
+                        if (temperature > highestTemperature) {
+                            highestTemperature = temperature;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    currTemp_ = highestTemperature;
 }
 
 
@@ -285,6 +321,7 @@ void NVIDIAGpuReader::readMaxTemp() {
     //dynamically linking the library
     void* nvmlLib = dlopen("libnvidia-ml.so.1", RTLD_NOW);
     if (!nvmlLib) {
+        std::cerr<<"Couldn't initialize libnvidia-ml.so.1 library!"<<std::endl;
         return;
     }
     //Using nvml api to retrieve the information
@@ -359,13 +396,11 @@ void NVIDIAGpuReader::readCurrTemp() {
     auto getTempFunc = (nvmlDeviceGetTemperature_t)dlsym(nvmlLib, "nvmlDeviceGetTemperature");
 
     if (!initFunc || !shutdownFunc || !getDeviceCount || !getHandleFunc || !getTempFunc) {
-        std::cerr << "Couldn't find necessary functions in nvml library!" << std::endl;
         dlclose(nvmlLib);
         return;
     }
 
     if (initFunc() != NVML_SUCCESS) {
-        std::cerr << "Couldn't initialize nvml library!" << std::endl;
         dlclose(nvmlLib);
         return;
     }
@@ -375,21 +410,18 @@ void NVIDIAGpuReader::readCurrTemp() {
     unsigned int temp;
 
     if (getDeviceCount(&deviceCount) != NVML_SUCCESS || deviceCount == 0) {
-        std::cerr<<"Unable to retrieve the device count!"<<std::endl;
         shutdownFunc();
         dlclose(nvmlLib);
         return;
     }
 
     if (getHandleFunc(0, &gpu) != NVML_SUCCESS) {
-        std::cerr<<"Unable to retrieve the GPU handle!"<<std::endl;
         shutdownFunc();
         dlclose(nvmlLib);
         return;
     }
 
     if (getTempFunc(gpu, NVML_TEMPERATURE_GPU, &temp) != NVML_SUCCESS) {
-        std::cerr<<"Unable to retrieve current temperature  for GPU!"<<std::endl;
         shutdownFunc();
         dlclose(nvmlLib);
         return;
