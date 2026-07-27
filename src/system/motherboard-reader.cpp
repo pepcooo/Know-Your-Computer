@@ -1,16 +1,16 @@
 #include "../../include/system/motherboard-reader.h"
 #include <iostream>
 #include <fstream>
-#include <memory>   // do "otworzenia" terminala wirtualnego
+#include <memory>
 #include <array>
-#include <cstdio>   // do popen
-using namespace std;
+#include <cstdio>
 
-string MotherboardReader::execCommand(const char* cmd) {
-    array<char, 128> buffer{};
-    string type;
 
-    unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);      //pilnowanie zamkniecia
+std::string MotherboardReader::execCommand(const char* cmd) {
+    std::array<char, 128> buffer{};
+    std::string type;
+
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd, "r"), pclose);
 
     if (!pipe) {
         return "Unknown";
@@ -20,14 +20,14 @@ string MotherboardReader::execCommand(const char* cmd) {
         type += buffer.data();
     }
 
-    if (!type.empty() && type.back() == '\n') { //usuwanie entera na koncu
+    if (!type.empty() && type.back() == '\n') {
         type.pop_back();
     }
     return type;
 }
 
 void MotherboardReader::readModel() {
-    ifstream fileVendor("/sys/class/dmi/id/board_vendor");
+    std::ifstream fileVendor("/sys/class/dmi/id/board_vendor");
     if (fileVendor.is_open()) {
         getline(fileVendor, vendor);
         fileVendor.close();
@@ -36,7 +36,7 @@ void MotherboardReader::readModel() {
         vendor = "Unknown";
     }
 
-    ifstream fileModel("/sys/class/dmi/id/board_name");
+    std::ifstream fileModel("/sys/class/dmi/id/board_name");
     if (fileModel.is_open()) {
         getline(fileModel, modelName_);
         fileModel.close();
@@ -54,8 +54,8 @@ void MotherboardReader::readModel() {
 }
 
 void MotherboardReader::printModel() const {
-    cout << "Vendor: " << vendor << endl;
-    cout << "Model: " << modelName_ << endl;
-    cout << "RAM type: " << RAM_type << endl;
+    std::cout << "Vendor: " << vendor << std::endl;
+    std::cout << "Model: " << modelName_ << std::endl;
+    std::cout << "RAM type: " << RAM_type << std::endl;
 
 }
