@@ -1,6 +1,6 @@
 #pragma once
 
-#include "component-reader.h"
+#include "../component-reader.h"
 
 class ProcReader : public ComponentReader
 {

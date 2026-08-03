@@ -1,4 +1,5 @@
-#include "../../include/system/motherboard-reader.h"
+#include "motherboard-reader.h"
+
 #include <iostream>
 #include <fstream>
 

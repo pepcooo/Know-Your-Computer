@@ -7,9 +7,21 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_executable(Know_Your_Computer
         src/main.cpp
         include/system/component-reader.h
-        include/system/proc-reader.h
-        src/system/proc-reader.cpp)
+        include/system/CPU/proc-reader.h
+        include/system/GPU/gpu-reader.h
+        include/system/Motherboard/motherboard-reader.h
+        src/system/CPU/proc-reader.cpp
+        src/system/GPU/gpu-reader.cpp
+        src/system/Motherboard/motherboard-reader.cpp
+        src/system/component-reader.cpp
+        )
 
 target_include_directories(Know_Your_Computer PRIVATE
-        ${CMAKE_SOURCE_DIR}/include/system
+        ${CMAKE_SOURCE_DIR}/include/system/CPU
+        ${CMAKE_SOURCE_DIR}/include/system/GPU
+        ${CMAKE_SOURCE_DIR}/include/system/Motherboard
+        ${CMAKE_SOURCE_DIR}/include/system/
+        ${CMAKE_SOURCE_DIR}/vendor/nvml
 )
+
+target_link_libraries(Know_Your_Computer PRIVATE ${CMAKE_DL_LIBS})
