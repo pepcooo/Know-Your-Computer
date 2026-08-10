@@ -15,7 +15,7 @@ typedef nvmlReturn_t (*nvmlDeviceGetCount_t)(unsigned int*);
 typedef nvmlReturn_t (*nvmlDeviceGetHandleByIndex_t)(unsigned int, nvmlDevice_t*);
 typedef nvmlReturn_t (*nvmlDeviceGetMaxTemperature_t)(nvmlDevice_t, nvmlTemperatureThresholds_enum, unsigned int*);
 typedef nvmlReturn_t (*nvmlDeviceGetTemperature_t)(nvmlDevice_t, nvmlTemperatureSensors_t, unsigned int*);
-
+typedef nvmlReturn_t (*nvmlDeviceGetMemoryInfo_t)(nvmlDevice_t, nvmlMemory_t*);
 
 //Add namespace because it's tedious to write std::filesystem all the time
 namespace fs = std::filesystem;
@@ -34,6 +34,13 @@ void GpuReader::printMaxTemp() const {
 
 void GpuReader::printCurrTemp() const {
     std::cout<<"Current GPU temperature: "<<currTemp_<<"°C"<<std::endl;
+}
+
+
+void GpuReader::printVRAM() const {
+    std::cout<<"Total VRAM: "<<vram_.total<<std::endl;
+    std::cout<<"Free VRAM: "<<vram_.free<<std::endl;
+    std::cout<<"Used VRAM: "<<vram_.used<<std::endl;
 }
 
 
@@ -245,6 +252,11 @@ void IntelGpuReader::readCurrTemp() {
 }
 
 
+void IntelGpuReader::readVRAM() {
+
+}
+
+
 void AMDGpuReader::readMaxTemp() {
     for (const auto& entry : fs::directory_iterator("/sys/class/hwmon")) {
         if (entry.is_directory()) {
@@ -314,6 +326,10 @@ void AMDGpuReader::readCurrTemp() {
         }
     }
     currTemp_ = highestTemperature;
+}
+
+void AMDGpuReader::readVRAM() {
+
 }
 
 
@@ -393,6 +409,9 @@ void NVIDIAGpuReader::readCurrTemp() {
     auto shutdownFunc = (nvmlShutdown_t)dlsym(nvmlLib, "nvmlShutdown");
     auto getDeviceCount = (nvmlDeviceGetCount_t)dlsym(nvmlLib, "nvmlDeviceGetCount");
     auto getHandleFunc = (nvmlDeviceGetHandleByIndex_t)dlsym(nvmlLib, "nvmlDeviceGetHandleByIndex_v2");
+    if (!getHandleFunc) {
+        getHandleFunc = (nvmlDeviceGetHandleByIndex_t)dlsym(nvmlLib, "nvmlDeviceGetHandleByIndex");
+    }
     auto getTempFunc = (nvmlDeviceGetTemperature_t)dlsym(nvmlLib, "nvmlDeviceGetTemperature");
 
     if (!initFunc || !shutdownFunc || !getDeviceCount || !getHandleFunc || !getTempFunc) {
@@ -428,6 +447,67 @@ void NVIDIAGpuReader::readCurrTemp() {
     }
 
     currTemp_ = static_cast<int>(temp);
+    shutdownFunc();
+    dlclose(nvmlLib);
+}
+
+
+void NVIDIAGpuReader::readVRAM() {
+    void* nvmlLib = dlopen("libnvidia-ml.so.1", RTLD_NOW);
+    if (!nvmlLib) {
+        return;
+    }
+
+    auto initFunc = (nvmlInit_t)dlsym(nvmlLib, ("nvmlInit_v2"));
+    if (!initFunc) {
+        initFunc = (nvmlInit_t)dlsym(nvmlLib, ("nvmlInit"));
+    }
+
+    auto shutdownFunc = (nvmlShutdown_t)dlsym(nvmlLib, "nvmlShutdown");
+    auto getDeviceCount = (nvmlDeviceGetCount_t)dlsym(nvmlLib, "nvmlDeviceGetCount");
+    auto getHandleFunc = (nvmlDeviceGetHandleByIndex_t)dlsym(nvmlLib, "nvmlDeviceGetHandleByIndex_v2");
+    if (!getHandleFunc) {
+        getHandleFunc = (nvmlDeviceGetHandleByIndex_t)dlsym(nvmlLib, "nvmlDeviceGetHandleByIndex");
+    }
+    auto getVramFunc = (nvmlDeviceGetMemoryInfo_t)dlsym(nvmlLib, "nvmlDeviceGetMemoryInfo");
+
+    if (!initFunc || !shutdownFunc || !getDeviceCount || !getHandleFunc || !getVramFunc) {
+        std::cerr << "Couldn't find necessary functions in nvml library (VRAM reading)!" << std::endl;
+        dlclose(nvmlLib);
+        return;
+    }
+
+    if (initFunc() != NVML_SUCCESS) {
+        dlclose(nvmlLib);
+        return;
+    }
+
+    unsigned int deviceCount;
+    nvmlDevice_t gpu;
+    nvmlMemory_t vram = {0, 0, 0};
+
+    if (getDeviceCount(&deviceCount) != NVML_SUCCESS || deviceCount == 0) {
+        shutdownFunc();
+        dlclose(nvmlLib);
+        return;
+    }
+
+    if (getHandleFunc(0, &gpu) != NVML_SUCCESS) {
+        shutdownFunc();
+        dlclose(nvmlLib);
+        return;
+    }
+
+    if (getVramFunc(gpu, &vram) != NVML_SUCCESS) {
+        shutdownFunc();
+        dlclose(nvmlLib);
+        return;
+    }
+
+    vram_.total = vram.total;
+    vram_.free = vram.free;
+    vram_.used = vram.used;
+
     shutdownFunc();
     dlclose(nvmlLib);
 }
