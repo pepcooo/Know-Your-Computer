@@ -329,7 +329,40 @@ void AMDGpuReader::readCurrTemp() {
 }
 
 void AMDGpuReader::readVRAM() {
+    for (auto& entry : fs::directory_iterator("/sys/class/drm")){
+        if (entry.is_directory() && entry.path().string().find("card") != std::string::npos) {
+            std::string namePath = entry.path().string() + "/device/vendor";
+            std::ifstream nameFile(namePath);
+            if (!nameFile.is_open()) {
+                continue;
+            }
+            std::string vendor;
+            std::getline(nameFile, vendor);
+            if (vendor.find("0x1002") != std::string::npos){
+                long long temp;
+                std::ifstream vramTotal(entry.path().string() + "/device/mem_info_vram_total");
+                if (!vramTotal.is_open()){
+                    vram_.total = -1;
+                }
+                else{
+                    vramTotal >> temp;
+                    temp/=1024*1024;
+                    vram_.total = temp;
+                }
 
+                std::ifstream vramUsed(entry.path().string() + "/device/mem_info_vram_used");
+                if (!vramUsed.is_open()){
+                    vram_.used = -1 ;
+                }
+                else{
+                    vramUsed >> temp;
+                    temp/=1024*1024;
+                    vram_.used = temp;
+                }
+                return;
+            }
+        }
+    }
 }
 
 
