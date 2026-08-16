@@ -14,7 +14,7 @@ add_executable(Know_Your_Computer
         src/system/GPU/gpu-reader.cpp
         src/system/Motherboard/motherboard-reader.cpp
         src/system/component-reader.cpp
-        )
+)
 
 target_include_directories(Know_Your_Computer PRIVATE
         ${CMAKE_SOURCE_DIR}/include/system/CPU
@@ -22,6 +22,7 @@ target_include_directories(Know_Your_Computer PRIVATE
         ${CMAKE_SOURCE_DIR}/include/system/Motherboard
         ${CMAKE_SOURCE_DIR}/include/system/
         ${CMAKE_SOURCE_DIR}/vendor/nvml
+        ${CMAKE_SOURCE_DIR}/vendor/level-zero
 )
 
 target_link_libraries(Know_Your_Computer PRIVATE ${CMAKE_DL_LIBS})

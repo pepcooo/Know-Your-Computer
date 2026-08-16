@@ -1,12 +1,14 @@
 #include "gpu-reader.h"
 
 #include "nvml.h"
+#include "zes_api.h"
 #include <dlfcn.h>
 
 #include <fstream>
 #include <iostream>
 #include <cstdio>
 #include <filesystem>
+#include <vector>
 
 
 typedef nvmlReturn_t (*nvmlInit_t)(void);
@@ -16,6 +18,13 @@ typedef nvmlReturn_t (*nvmlDeviceGetHandleByIndex_t)(unsigned int, nvmlDevice_t*
 typedef nvmlReturn_t (*nvmlDeviceGetMaxTemperature_t)(nvmlDevice_t, nvmlTemperatureThresholds_enum, unsigned int*);
 typedef nvmlReturn_t (*nvmlDeviceGetTemperature_t)(nvmlDevice_t, nvmlTemperatureSensors_t, unsigned int*);
 typedef nvmlReturn_t (*nvmlDeviceGetMemoryInfo_t)(nvmlDevice_t, nvmlMemory_t*);
+
+typedef ze_result_t (*zesInit_t)(zes_init_flags_t);
+typedef ze_result_t (*zesDriverGet_t)(uint32_t*, zes_driver_handle_t*);
+typedef ze_result_t (*zesDeviceGet_t)(zes_driver_handle_t, uint32_t*, zes_device_handle_t*);
+typedef ze_result_t (*zesDeviceEnumMemoryModules_t)(zes_device_handle_t, uint32_t*, zes_mem_handle_t*);
+typedef ze_result_t (*zesMemoryGetState_t)(zes_mem_handle_t, zes_mem_state_t*);
+
 
 //Add namespace because it's tedious to write std::filesystem all the time
 namespace fs = std::filesystem;
@@ -253,7 +262,85 @@ void IntelGpuReader::readCurrTemp() {
 
 
 void IntelGpuReader::readVRAM() {
+    void* zeLib = dlopen("libze_loader.so.1", RTLD_NOW);
+    if (!zeLib){
+        return;
+    }
 
+    auto initFunc = (zesInit_t)dlsym(zeLib, "zesInit");
+    auto getDriverFunc = (zesDriverGet_t)dlsym(zeLib, "zesDriverGet");
+    auto getDeviceHandle = (zesDeviceGet_t)dlsym(zeLib, "zesDeviceGet");
+    auto getModuleHandle = (zesDeviceEnumMemoryModules_t)dlsym(zeLib, "zesDeviceEnumMemoryModules");
+    auto getMemoryStateFunc = (zesMemoryGetState_t)dlsym(zeLib, "zesMemoryGetState");
+
+    if (!initFunc || !getDriverFunc || !getDeviceHandle || !getModuleHandle || !getMemoryStateFunc){
+        std::cerr << "Couldn't find necessary functions in level-zero library!" << std::endl;
+        dlclose(zeLib);
+        return;
+    }
+
+    if (initFunc(0) != ZE_RESULT_SUCCESS){
+        std::cerr<<"Couldn't initialize level-zero library!"<<std::endl;
+        dlclose(zeLib);
+        return;
+    }
+
+    uint32_t driverCount = 0;
+    if (getDriverFunc(&driverCount, nullptr) != ZE_RESULT_SUCCESS){
+        std::cerr<<"Couldn't get driver count!"<<std::endl;
+        dlclose(zeLib);
+        return;
+    }
+
+    std::vector<zes_driver_handle_t> drivers(driverCount);
+    if (driverCount == 0 || getDriverFunc(&driverCount, drivers.data()) != ZE_RESULT_SUCCESS){
+        std::cerr<<"Couldn't write the drivers data!"<<std::endl;
+        dlclose(zeLib);
+        return;
+    }
+
+    uint32_t deviceCount = 0;
+    if (getDeviceHandle(drivers.at(0), &deviceCount, nullptr) != ZE_RESULT_SUCCESS){
+        std::cerr<<"Couldn't get gpu device!"<<std::endl;
+        dlclose(zeLib);
+        return;
+    }
+
+    std::vector<zes_device_handle_t> devices(deviceCount);
+    if (deviceCount == 0 || getDeviceHandle(drivers.at(0), &deviceCount, devices.data()) != ZE_RESULT_SUCCESS){
+        std::cerr<<"Couldn't get gpu devices!"<<std::endl;
+        dlclose(zeLib);
+        return;
+    }
+    zes_device_handle_t gpu = devices.at(0);
+
+    uint32_t memCount = 0;
+    if (getModuleHandle(gpu, &memCount, nullptr) != ZE_RESULT_SUCCESS){
+        std::cerr<<"Couldn't get memory handle!"<<std::endl;
+        dlclose(zeLib);
+        return;
+    }
+
+    std::vector<zes_mem_handle_t> memory(memCount);
+    if (memCount == 0 || getModuleHandle(gpu, &memCount, memory.data()) != ZE_RESULT_SUCCESS){
+        std::cerr<<"Couldn't get memory handle!"<<std::endl;
+        dlclose(zeLib);
+        return;
+    }
+    zes_mem_handle_t memHandle = memory.at(0);
+
+    zes_mem_state_t memState = {};
+    memState.stype = ZES_STRUCTURE_TYPE_MEM_STATE;
+    if (getMemoryStateFunc(memHandle, &memState) != ZE_RESULT_SUCCESS){
+        std::cerr<<"Couldn't get memory state!"<<std::endl;
+        dlclose(zeLib);
+        return;
+    }
+
+    vram_.total = memState.size;
+    vram_.free = memState.free;
+
+    dlclose(zeLib);
 }
 
 
