@@ -39,31 +39,6 @@ public:
 };
 
 
-class IntelGpuReader : public GpuReader {
-public:
-    IntelGpuReader(const std::string& modelName) : GpuReader(modelName) {}
-    void readMaxTemp() override;
-    void readCurrTemp() override;
-    void readVRAM() override;
-};
-
-class NVIDIAGpuReader : public GpuReader {
-public:
-    NVIDIAGpuReader(const std::string& modelName) : GpuReader(modelName) {}
-    void readMaxTemp() override;
-    void readCurrTemp() override;
-    void readVRAM() override;
-};
-
-class AMDGpuReader : public GpuReader {
-public:
-    AMDGpuReader(const std::string& modelName) : GpuReader(modelName) {}
-    void readMaxTemp() override;
-    void readCurrTemp() override;
-    void readVRAM() override;
-};
-
-
 //A GPU factory that only checks the name of the model and looks for one of the three keywords and returns
 //appropriate class.
 class GpuFactory {
