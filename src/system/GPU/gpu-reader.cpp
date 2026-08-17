@@ -1,4 +1,7 @@
 #include "gpu-reader.h"
+#include "intel-reader.h"
+#include "amd-reader.h"
+#include "nvidia-reader.h"
 
 #include <iostream>
 #include <cstdio>
