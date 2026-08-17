@@ -14,6 +14,9 @@ add_executable(Know_Your_Computer
         src/system/GPU/gpu-reader.cpp
         src/system/Motherboard/motherboard-reader.cpp
         src/system/component-reader.cpp
+        src/system/GPU/intel-reader.cpp
+        src/system/GPU/nvidia-reader.cpp
+        src/system/GPU/amd-reader.cpp
 )
 
 target_include_directories(Know_Your_Computer PRIVATE
