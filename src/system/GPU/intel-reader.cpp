@@ -1,4 +1,4 @@
-#include "gpu-reader.h"
+#include "intel-reader.h"
 #include "zes_api.h"
 #include <dlfcn.h>
 

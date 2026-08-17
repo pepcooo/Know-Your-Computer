@@ -1,4 +1,4 @@
-#include "gpu-reader.h"
+#include "amd-reader.h"
 
 
 #include <filesystem>

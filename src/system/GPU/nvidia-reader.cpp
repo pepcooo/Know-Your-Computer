@@ -1,4 +1,4 @@
-#include "gpu-reader.h"
+#include "nvidia-reader.h"
 
 #include "nvml.h"
 #include <dlfcn.h>
