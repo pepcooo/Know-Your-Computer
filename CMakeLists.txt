@@ -20,12 +20,15 @@ add_executable(Know_Your_Computer
         include/system/GPU/intel-reader.h
         include/system/GPU/nvidia-reader.h
         include/system/GPU/amd-reader.h
+        include/system/Processes/process-reader.h
+        src/system/Processes/process-reader.cpp
 )
 
 target_include_directories(Know_Your_Computer PRIVATE
         ${CMAKE_SOURCE_DIR}/include/system/CPU
         ${CMAKE_SOURCE_DIR}/include/system/GPU
         ${CMAKE_SOURCE_DIR}/include/system/Motherboard
+        ${CMAKE_SOURCE_DIR}/include/system/Processes
         ${CMAKE_SOURCE_DIR}/include/system/
         ${CMAKE_SOURCE_DIR}/vendor/nvml
         ${CMAKE_SOURCE_DIR}/vendor/level-zero
