@@ -31,7 +31,7 @@ void ProcessReader::readProcesses(){
             uint64_t ramUsed = 0;
             char state = 'U';
             while (std::getline(ifs, line)){
-                if (line.find("Name:") != std::string::npos){
+                if (line.find("Name:") == 0){
                     size_t index = line.find(':');
                     name = line.substr(index + 2);
                 }
@@ -45,12 +45,12 @@ void ProcessReader::readProcesses(){
                     std::string ppidStr = line.substr(index + 2);
                     PPID = std::stoi(ppidStr);
                 }
-                else if (line.find("VmRSS:") != std::string::npos){
+                else if (line.find("VmRSS:") == 0){
                     size_t index = line.find(':');
                     std::string ramStr = line.substr(index + 2);
                     ramUsed = std::stoi(ramStr)/1024;
                 }
-                else if (line.find("State:") != std::string::npos){
+                else if (line.find("State:") == 0){
                     size_t index = line.find(':');
                     std::string stateStr = line.substr(index + 2);
                     state = stateStr[0];
