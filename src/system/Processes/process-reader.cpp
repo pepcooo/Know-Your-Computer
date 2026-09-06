@@ -10,7 +10,8 @@ namespace fs = std::filesystem;
 
 void ProcessReader::printProcesses() const{
     for (const auto& process : processes){
-        std::cout<<process.name<<": "<<process.PID<<", "<<process.ramUsed<<" MB"<<std::endl;
+        std::cout<<process.name<<": "<<process.PID<<", "<<process.PPID<<", "<<getProcessName(process.state)<<", "
+        <<process.ramUsed<<" MB"<<std::endl;
     }
 }
 
@@ -26,7 +27,9 @@ void ProcessReader::readProcesses(){
             std::string line;
             std::string name = "Unknown";
             uint32_t PID = 0;
+            uint32_t PPID = 0;
             uint64_t ramUsed = 0;
+            char state = 'U';
             while (std::getline(ifs, line)){
                 if (line.find("Name:") != std::string::npos){
                     size_t index = line.find(':');
@@ -37,13 +40,23 @@ void ProcessReader::readProcesses(){
                     std::string pidStr = line.substr(index + 2);
                     PID = std::stoi(pidStr);
                 }
+                else if (line.find("PPid:") == 0){
+                    size_t index = line.find(':');
+                    std::string ppidStr = line.substr(index + 2);
+                    PPID = std::stoi(ppidStr);
+                }
                 else if (line.find("VmRSS:") != std::string::npos){
                     size_t index = line.find(':');
                     std::string ramStr = line.substr(index + 2);
                     ramUsed = std::stoi(ramStr)/1024;
                 }
+                else if (line.find("State:") != std::string::npos){
+                    size_t index = line.find(':');
+                    std::string stateStr = line.substr(index + 2);
+                    state = stateStr[0];
+                }
             }
-            processes.push_back(Process(name, PID, ramUsed));
+            processes.push_back(Process(name, PID, PPID, ramUsed, state));
         }
     }
 }
